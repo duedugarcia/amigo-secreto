@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎄 Amigo Secreto da Família</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Poppins,sans-serif;min-height:100vh;background:linear-gradient(135deg,#0f5132,#198754);display:flex;align-items:center;justify-content:center}
+.card{background:#fff;color:#333;width:100%;max-width:520px;padding:30px;border-radius:16px;box-shadow:0 20px 40px rgba(0,0,0,.25)}
+h1{text-align:center;margin-bottom:10px}
+.subtitle{text-align:center;color:#666;font-size:14px;margin-bottom:20px}
+label{font-size:14px;font-weight:500}
+input{width:100%;padding:12px;margin:8px 0 14px;border-radius:8px;border:1px solid #ccc}
+button{width:100%;padding:12px;border:none;border-radius:8px;background:#198754;color:#fff;font-weight:600;cursor:pointer}
+button:hover{background:#146c43}
+.secondary{background:#6c757d;margin-top:8px}
+.secondary:hover{background:#565e64}
+.danger{background:#dc3545;margin-top:8px}
+.danger:hover{background:#bb2d3b}
+.hidden{display:none}
+.eye{cursor:pointer;font-size:14px;text-align:right;color:#198754}
+.table{width:100%;border-collapse:collapse;font-size:13px;margin-top:10px}
+.table th,.table td{border-bottom:1px solid #ddd;padding:6px;text-align:left}
+.table th{background:#f1f1f1}
+.result{text-align:center;font-size:18px}
+.result span{display:block;font-size:26px;color:#198754;font-weight:600}
+.snow{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;overflow:hidden}
+.snow span{position:absolute;top:-10px;color:white;opacity:.8;animation:fall linear infinite}
+@keyframes fall{to{transform:translateY(110vh)}}
+</style>
+</head>
+<body>
+<div class="snow" id="snow"></div>
+<div class="card">
+
+<div id="telaCadastro">
+<h1>🎁 Amigo Secreto</h1>
+<p class="subtitle" id="cadastroInfo">Cadastro de Participantes -  Desenvolvido por J.Eduardo Garcia</p>
+<label>Nome</label>
+<input id="nome">
+<label>E-mail</label>
+<input id="email" type="email">
+<label>Senha</label>
+<input id="senha" type="password">
+<div class="eye" onclick="toggleSenha()">👁 Senha : Mostrar/Ocultar </div>
+<button id="btnCadastro" onclick="cadastrar()">Entrar no sorteio</button>
+<button id="btnLogin" class="secondary" disabled style="opacity:.6">Já me cadastrei</button>
+<button class="secondary" onclick="mostrarTela('telaAdminLogin')">Área do administrador</button>
+</div>
+
+<div id="telaLogin" class="hidden">
+<h1>🔐 Login</h1>
+<p class="subtitle">E-mail e senha</p>
+<input id="loginEmail" placeholder="E-mail">
+<input id="loginSenha" type="password" placeholder="Senha">
+<button id="btnVer" onclick="verResultado()" class="hidden">Ver meu Amigo Secreto</button>
+<button class="secondary" onclick="mostrarTela('telaCadastro')">Voltar</button>
+</div>
+
+<div id="telaResultado" class="hidden">
+<h1>🎄 Resultado</h1>
+<div class="result" id="resultado"></div>
+<button class="secondary" onclick="mostrarTela('telaLogin')">Sair</button>
+</div>
+
+<div id="telaAdminLogin" class="hidden">
+<h1>🛠️ Administrador</h1>
+<input id="adminSenha" type="password" placeholder="Senha do admin">
+<button onclick="loginAdmin()">Entrar</button>
+<button class="secondary" onclick="mostrarTela('telaCadastro')">Voltar</button>
+</div>
+
+<div id="telaAdmin" class="hidden">
+<h1>⚙️ Painel Admin</h1>
+<p class="subtitle" id="infoAdmin"></p>
+<button onclick="forcarSorteio()">Forçar sorteio / Bloquear cadastros</button>
+<table class="table" id="tabela"></table>
+<button class="danger" onclick="resetarTudo()">Resetar tudo</button>
+<button class="secondary" onclick="mostrarTela('telaCadastro')">Sair</button>
+</div>
+
+</div>
+
+<script>
+const KEY_P='as_part';
+const KEY_S='as_sort';
+const KEY_B='as_block';
+const ADMIN_SENHA='numsey';
+
+const getP=()=>JSON.parse(localStorage.getItem(KEY_P))||[];
+const saveP=l=>localStorage.setItem(KEY_P,JSON.stringify(l));
+const hash=s=>btoa(s);
+
+const infoAdmin=document.getElementById('infoAdmin');
+const tabela=document.getElementById('tabela');
+const adminSenha=document.getElementById('adminSenha');
+
+function toggleSenha(){const s=document.getElementById('senha');s.type=s.type==='password'?'text':'password'}
+
+function cadastrar(){
+ if(localStorage.getItem(KEY_B))return alert('Cadastros bloqueados');
+ const n=nome.value;
+ const e=email.value.toLowerCase();
+ const s=senha.value;
+ if(!n||!e||!s)return alert('Preencha tudo');
+ const l=getP();
+ if(l.find(p=>p.email===e))return alert('E-mail já cadastrado');
+ l.push({nome:n,email:e,senha:hash(s),revelado:false});
+ saveP(l);
+ nome.value=email.value=senha.value='';
+ alert('Cadastrado com sucesso!');
+}
+
+function sortear(){
+ if(localStorage.getItem(KEY_S))return;
+ const p=getP();
+ if(p.length<2)return;
+ let s;
+ do{s=[...p].sort(()=>Math.random()-.5)}
+ while(s.some((x,i)=>x.email===p[i].email));
+ localStorage.setItem(KEY_S,JSON.stringify(p.map((x,i)=>({...x,sorteado:s[i].nome}))));
+}
+
+function verResultado(){
+ if(!localStorage.getItem(KEY_B))return alert('⏳ O sorteio ainda não foi iniciado pelo administrador');
+ const e=loginEmail.value.toLowerCase();
+ const s=loginSenha.value;
+ const r=JSON.parse(localStorage.getItem(KEY_S))||[];
+ const p=r.find(x=>x.email===e && x.senha===hash(s));
+ if(!p)return alert('Credenciais inválidas');
+ p.revelado=true;
+ localStorage.setItem(KEY_S,JSON.stringify(r));
+ resultado.innerHTML=`🎁 Olá <b>${p.nome}</b><span>🎄 ${p.sorteado} 🎁</span>`;
+ lancarConfete();
+ mostrarTela('telaResultado');
+}
+
+function loginAdmin(){if(adminSenha.value!==ADMIN_SENHA)return alert('Senha incorreta');atualizarAdmin();mostrarTela('telaAdmin')}
+
+function atualizarAdmin(){
+ const p=getP();
+ infoAdmin.innerText=`Participantes: ${p.length}`;
+ let html='<tr><th>Nome</th><th>Email</th><th>Senha</th><th>Revelado</th><th>Ações</th></tr>';
+ p.forEach((x,i)=>{html+=`<tr><td>${x.nome}</td><td>${x.email}</td><td>${x.senha}</td><td>${x.revelado?'✅':'⏳'}</td><td><button onclick="excluir(${i})">🗑</button> <button onclick="resetSenha(${i})">🔑</button></td></tr>`});
+ tabela.innerHTML=html;
+}
+
+function excluir(i){const p=getP();p.splice(i,1);saveP(p);atualizarAdmin()}
+function resetSenha(i){const p=getP();const nova=prompt('Nova senha:');if(!nova)return;p[i].senha=hash(nova);saveP(p);alert('Senha alterada')}
+
+function forcarSorteio(){
+ localStorage.setItem(KEY_B,'1');
+ localStorage.removeItem(KEY_S);
+ sortear();
+ alert('Sorteio iniciado! 🎄');
+ cadastroInfo.innerText='Cadastros encerrados';
+ btnCadastro.disabled=true;
+ btnCadastro.innerText='Cadastros encerrados';
+ btnCadastro.style.opacity=0.6;
+ btnLogin.disabled=false;
+ btnLogin.style.opacity=1;
+ btnLogin.onclick=()=>mostrarTela('telaLogin');
+ btnVer.classList.remove('hidden');
+}
+
+function resetarTudo(){if(!confirm('Tem certeza?'))return;localStorage.clear();location.reload()}
+function mostrarTela(id){document.querySelectorAll('.card>div').forEach(d=>d.classList.add('hidden'));document.getElementById(id).classList.remove('hidden')}
+
+function criarNeve(){const s=document.getElementById('snow');for(let i=0;i<40;i++){const f=document.createElement('span');f.innerHTML='❄';f.style.left=Math.random()*100+'%';f.style.animationDuration=5+Math.random()*5+'s';f.style.fontSize=10+Math.random()*20+'px';s.appendChild(f)}}
+function lancarConfete(){for(let i=0;i<30;i++){const c=document.createElement('div');c.innerHTML='🎉';c.style.position='fixed';c.style.left=Math.random()*100+'%';c.style.top='-20px';c.style.fontSize='20px';c.style.animation='fall 3s linear';document.body.appendChild(c);setTimeout(()=>c.remove(),3000)}}
+criarNeve();
+</script>
+
+</body>
+</html>
